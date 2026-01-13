@@ -1,0 +1,41 @@
+.map-container {
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.map-container h2 {
+  margin-top: 0;
+  margin-bottom: 0.5em;
+}
+
+.map-container p {
+  margin-bottom: 1.5em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.slider-container {
+  margin-bottom: 20px;
+}
+
+.slider-container label {
+  display: block;
+  margin-bottom: 10px;
+}
+
+.slider-input {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.privacy-indicator {
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 5px;
+}
+
+.map-wrapper {
+  height: 500px;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
