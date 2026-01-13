@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Map, { Source, Layer, Marker } from 'react-map-gl';
 import circle from '@turf/circle'; 
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './Map.css';
 
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || '';
 
-const MAPBOX_TOKEN = 'pk.eyJ1IjoiYWNobzU3NTAiLCJhIjoiY21rYnp5MDQ0MDl0ejNmcHZjYWs0ZHJybiJ9.kwfXad3DuZYNPufNfKtM6g'
+if (!MAPBOX_TOKEN) {
+  console.warn('VITE_MAPBOX_TOKEN is not set. Please create a .env file with your Mapbox token.');
+}
 
 // Helper function to generate a random offset location near the actual location
 // This provides privacy by not showing the exact location
@@ -30,43 +33,115 @@ const generateAnonymizedLocation = (actualLat, actualLng, anonymityRangeMeters) 
   };
 };
 
+// Generate interpolated points along Webster Ave with heat values
+// High heat (100) for houses #8-15 (30% to 60% down the street)
+// Medium heat (50) for the rest
+const generateWebsterData = () => {
+  const startLat = 43.706708;
+  const startLng = -72.293074;
+  const endLat = 43.706242;
+  const endLng = -72.291116;
+  
+  const numPoints = 100; // Number of interpolated points
+  const features = [];
+  
+  for (let i = 0; i <= numPoints; i++) {
+    const t = i / numPoints; // Progress along the street (0 to 1)
+    
+    // Linear interpolation between start and end coordinates
+    const lat = startLat + (endLat - startLat) * t;
+    const lng = startLng + (endLng - startLng) * t;
+    
+    // Assign heat value: 100 for 30% to 60% (houses #8-15), 50 for the rest
+    const heatValue = (t >= 0.3 && t <= 0.6) ? 100 : 50;
+    
+    features.push({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [lng, lat]
+      },
+      properties: {
+        heat: heatValue
+      }
+    });
+  }
+  
+  // Add additional heated locations
+  const additionalLocations = [
+    { lat: 43.702812, lng: -72.291661 },
+    { lat: 43.702772, lng: -72.290506 },
+    { lat: 43.703585, lng: -72.284328 }
+  ];
+  
+  additionalLocations.forEach(location => {
+    features.push({
+      type: 'Feature',
+      geometry: {
+        type: 'Point',
+        coordinates: [location.lng, location.lat]
+      },
+      properties: {
+        heat: 100 // High heat value to make these locations stand out
+      }
+    });
+  });
+  
+  return {
+    type: 'FeatureCollection',
+    features: features
+  };
+};
+
+// Fixed location when user doesn't want to share location
+const fixedLocation = { latitude: 43.705013, longitude: -72.288718 };
+
 const SafeRadiusMap = () => {
-    // 2. STATE: This is the "Brain" of the component
     const [viewport, setViewport] = useState({
       latitude: 40.7128, // Default: NYC (until we get user location)
       longitude: -74.0060,
       zoom: 13
     });
-    const [actualLocation, setActualLocation] = useState(null); // The REAL location (kept private)
-    const [displayLocation, setDisplayLocation] = useState(null); // The anonymized location (shown on map)
-    const [anonymityRange, setAnonymityRange] = useState(100); // Anonymity range in meters (default 500m)
-    const [circleData, setCircleData] = useState(null); // The shape of the circle
+    const [actualLocation, setActualLocation] = useState(null);
+    const [displayLocation, setDisplayLocation] = useState(null);
+    const [anonymityRange, setAnonymityRange] = useState(100);
+    const [circleData, setCircleData] = useState(null);
+    const [dontShareLocation, setDontShareLocation] = useState(false);
+    
+    // Generate Webster Ave heatmap data (memoized since it's static)
+    const websterHeatmapData = useMemo(() => generateWebsterData(), []);
   
-    // 3. EFFECT: Get User's Real Location on load
+    // Get user's location on load or when checkbox state changes
     useEffect(() => {
+      if (dontShareLocation) {
+        setActualLocation(fixedLocation);
+        const anonymized = generateAnonymizedLocation(
+          fixedLocation.latitude, 
+          fixedLocation.longitude, 
+          anonymityRange
+        );
+        setDisplayLocation(anonymized);
+        setViewport((prev) => ({ ...prev, latitude: anonymized.latitude, longitude: anonymized.longitude }));
+        return;
+      }
+      
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           const { latitude, longitude } = pos.coords;
-          
-          // Store actual location privately (not displayed)
           setActualLocation({ latitude, longitude });
-          
-          // Generate initial anonymized location using current anonymity range
           const anonymized = generateAnonymizedLocation(latitude, longitude, anonymityRange);
           setDisplayLocation(anonymized);
-          
-          // Move the camera to the anonymized location
           setViewport((prev) => ({ ...prev, latitude: anonymized.latitude, longitude: anonymized.longitude }));
         },
         (err) => console.error("Could not find you:", err)
       );
-    }, []);
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [dontShareLocation]);
 
-    // 3b. EFFECT: Regenerate anonymized location when anonymity range changes
+    // Regenerate anonymized location when anonymity range changes
     useEffect(() => {
       if (!actualLocation) return;
       
-      // Generate new anonymized location with updated range
       const anonymized = generateAnonymizedLocation(
         actualLocation.latitude, 
         actualLocation.longitude, 
@@ -75,14 +150,10 @@ const SafeRadiusMap = () => {
       setDisplayLocation(anonymized);
     }, [anonymityRange, actualLocation]);
   
-    // 4. EFFECT: Calculate the Circle Shape
-    // The circle shows the anonymity range - where the user could actually be
+    // Calculate the circle shape showing anonymity range
     useEffect(() => {
       if (!displayLocation) return;
   
-      // Use Turf.js to create a circle polygon showing the anonymity range
-      // The circle radius matches the anonymity range, showing where the user could be
-      // Arguments: [centerLng, centerLat], radius, units
       const myCircle = circle(
         [displayLocation.longitude, displayLocation.latitude], 
         anonymityRange, 
@@ -94,10 +165,20 @@ const SafeRadiusMap = () => {
   
     return (
       <div className="map-container">
-        <h2>Location Anonymity</h2>
-        <p>Adjust the slider to control your privacy level. The circle shows where you could actually be located.</p>
+        <h2>Keep Your Location Anonymous</h2>
+        <p>Adjust the slider to control your privacy level. Your location is within the circle.</p>
   
-        {/* 5. THE SLIDER */}
+        <div className="checkbox-container">
+          <label>
+            <input 
+              type="checkbox" 
+              checked={dontShareLocation}
+              onChange={(e) => setDontShareLocation(e.target.checked)}
+            />
+            <span>Set my location to Baker Berry Library</span>
+          </label>
+        </div>
+
         <div className="slider-container">
           <label>Anonymity Range: <strong>{anonymityRange} meters</strong></label>
           <input 
@@ -114,16 +195,14 @@ const SafeRadiusMap = () => {
           </div>
         </div>
   
-        {/* 6. THE MAP */}
         <div className="map-wrapper">
           <Map
             mapboxAccessToken={MAPBOX_TOKEN}
             {...viewport}
-            onMove={evt => setViewport(evt.viewState)} // Allows dragging the map
-            style={{ width: '100%', height: '100%' }}
-            mapStyle="mapbox://styles/mapbox/light-v11" // The pretty "Airbnb" theme
+            onMove={evt => setViewport(evt.viewState)}
+            className="map-component"
+            mapStyle="mapbox://styles/mapbox/light-v11"
           >
-            {/* A. The Marker (Showing anonymized location, not exact position) */}
             {displayLocation && (
               <Marker 
                 latitude={displayLocation.latitude} 
@@ -132,10 +211,8 @@ const SafeRadiusMap = () => {
               />
             )}
   
-            {/* B. The Radius Visuals */}
             {circleData && (
               <Source id="my-data" type="geojson" data={circleData}>
-                {/* Layer 1: The Blue Fill */}
                 <Layer
                   id="point-radius-layer"
                   type="fill"
@@ -144,7 +221,6 @@ const SafeRadiusMap = () => {
                     'fill-opacity': 0.2
                   }}
                 />
-                {/* Layer 2: The Blue Outline */}
                 <Layer
                   id="point-radius-outline"
                   type="line"
@@ -155,6 +231,48 @@ const SafeRadiusMap = () => {
                 />
               </Source>
             )}
+
+            <Source id="webster-heatmap" type="geojson" data={websterHeatmapData}>
+              <Layer
+                id="webster-heatmap-layer"
+                type="heatmap"
+                paint={{
+                  'heatmap-weight': [
+                    'interpolate',
+                    ['linear'],
+                    ['get', 'heat'],
+                    50, 0.5,
+                    100, 1.0
+                  ],
+                  'heatmap-intensity': [
+                    'interpolate',
+                    ['linear'],
+                    ['zoom'],
+                    0, 0.5,
+                    20, 1.5
+                  ],
+                  'heatmap-color': [
+                    'interpolate',
+                    ['linear'],
+                    ['heatmap-density'],
+                    0, 'rgba(33,102,172,0)',
+                    0.2, 'rgb(103,169,207)',
+                    0.4, 'rgb(209,229,240)',
+                    0.6, 'rgb(253,219,199)',
+                    0.8, 'rgb(239,138,98)',
+                    1, 'rgb(178,24,43)'
+                  ],
+                  'heatmap-radius': [
+                    'interpolate',
+                    ['linear'],
+                    ['zoom'],
+                    0, 2,
+                    20, 30
+                  ],
+                  'heatmap-opacity': 0.7
+                }}
+              />
+            </Source>
           </Map>
         </div>
       </div>
