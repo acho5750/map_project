@@ -3,15 +3,16 @@
 
 ## Project: Anonymity Location Sharing
 Note: the project contains code written by AI
-### Git Repo: https://github.com/acho5750/map_project
-### Used: Mapbox GL, React
+Git Repo: https://github.com/acho5750/map_project
+Used: Mapbox GL, React
+
 ### Tutorials:
 * https://www.youtube.com/watch?v=PBbi72XL6vY
 * https://www.youtube.com/watch?v=aiw1F1mfeus&t=2480s
 * LLMs also taught me
 
 ### Purpose: Users can decide how anonymous they want to be when sharing location
-### Functionality:
+#### Functionality:
 * With the provided slider, the user can set a specific radius through which a circle will appear of that size
 * The Location of the user can be anywhere within the circle
 * If the radius is 50m, a 50m radius sized circle will appear at a random center point. However, the user will still be located within the circle
