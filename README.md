@@ -2,9 +2,9 @@
 ## Author: Andrew Cho
 
 ## Project: Anonymity Location Sharing
-Note: the project contains code written by AI
-Git Repo: https://github.com/acho5750/map_project
-Used: Mapbox GL, React
+* Note: the project contains code written by AI
+* Git Repo: https://github.com/acho5750/map_project
+* Used: Mapbox GL, React
 
 ### Tutorials:
 * https://www.youtube.com/watch?v=PBbi72XL6vY
