@@ -17,7 +17,7 @@
 * The Location of the user can be anywhere within the circle
 * If the radius is 50m, a 50m radius sized circle will appear at a random center point. However, the user will still be located within the circle
 
-### Additional Side Functionality:
+#### Additional Side Functionality:
 * If the user doesn't want to share location, the user can select the checkbox to set the location to Baker Berry Library
 * Heated Maps have been added around Dartmouth Frats
 
