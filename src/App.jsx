@@ -1,3 +1,5 @@
+// Code generated with the help of AI
+
 import SafeRadiusMap from './Map'
 
 function App() {

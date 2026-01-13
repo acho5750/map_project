@@ -1,3 +1,5 @@
+// Code generated with the help of AI
+
 import React, { useState, useEffect, useMemo } from 'react';
 import Map, { Source, Layer, Marker } from 'react-map-gl';
 import circle from '@turf/circle'; 
@@ -11,19 +13,13 @@ if (!MAPBOX_TOKEN) {
 }
 
 // Helper function to generate a random offset location near the actual location
-// This provides privacy by not showing the exact location
-// The user can be anywhere within the anonymityRange radius
 const generateAnonymizedLocation = (actualLat, actualLng, anonymityRangeMeters) => {
-  // Generate random distance (0 to anonymityRangeMeters meters)
-  // This means the user can be anywhere within the specified radius
-  const distance = Math.random() * anonymityRangeMeters;
   
-  // Generate random bearing (0 to 360 degrees)
-  const bearing = Math.random() * 360;
+  // Generate random distance (0 to anonymityRangeMeters meters)
+  const distance = Math.random() * anonymityRangeMeters;
+    const bearing = Math.random() * 360;
   
   // Convert distance and bearing to lat/lng offset
-  // Approximate: 1 degree latitude ≈ 111,000 meters
-  // Longitude varies by latitude, but we'll use a simple approximation
   const latOffset = (distance * Math.cos(bearing * Math.PI / 180)) / 111000;
   const lngOffset = (distance * Math.sin(bearing * Math.PI / 180)) / (111000 * Math.cos(actualLat * Math.PI / 180));
   
@@ -34,8 +30,6 @@ const generateAnonymizedLocation = (actualLat, actualLng, anonymityRangeMeters) 
 };
 
 // Generate interpolated points along Webster Ave with heat values
-// High heat (100) for houses #8-15 (30% to 60% down the street)
-// Medium heat (50) for the rest
 const generateWebsterData = () => {
   const startLat = 43.706708;
   const startLng = -72.293074;
@@ -48,11 +42,10 @@ const generateWebsterData = () => {
   for (let i = 0; i <= numPoints; i++) {
     const t = i / numPoints; // Progress along the street (0 to 1)
     
-    // Linear interpolation between start and end coordinates
     const lat = startLat + (endLat - startLat) * t;
     const lng = startLng + (endLng - startLng) * t;
     
-    // Assign heat value: 100 for 30% to 60% (houses #8-15), 50 for the rest
+    // Assign heat value: 100 for 30% to 60%, 50 for the rest
     const heatValue = (t >= 0.3 && t <= 0.6) ? 100 : 50;
     
     features.push({
@@ -67,7 +60,7 @@ const generateWebsterData = () => {
     });
   }
   
-  // Add additional heated locations
+  // Houses other than Frat Row
   const additionalLocations = [
     { lat: 43.702812, lng: -72.291661 },
     { lat: 43.702772, lng: -72.290506 },
@@ -98,7 +91,7 @@ const fixedLocation = { latitude: 43.705013, longitude: -72.288718 };
 
 const SafeRadiusMap = () => {
     const [viewport, setViewport] = useState({
-      latitude: 40.7128, // Default: NYC (until we get user location)
+      latitude: 40.7128, // Default: NYC
       longitude: -74.0060,
       zoom: 13
     });
